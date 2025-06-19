@@ -21,7 +21,7 @@
     "gradle",
     "adb"
   ],
-  "author": "Your Name",
+  "author": "Claude Code",
   "license": "MIT",
   "engines": {
     "node": ">=14.0.0"
