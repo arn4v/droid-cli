@@ -95,7 +95,13 @@ export class TerminalManager {
   private static async spawnITerm2(command: string, title: string, workingDirectory: string): Promise<boolean> {
     const appleScript = `
       tell application "iTerm"
-        create window with default profile
+        if (count of windows) = 0 then
+          create window with default profile
+        else
+          tell current window
+            create tab with default profile
+          end tell
+        end if
         tell current session of current window
           set name to "${title}"
           write text "cd '${workingDirectory}'"

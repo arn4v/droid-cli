@@ -47,41 +47,51 @@ async function handleBuildFailure(error: string): Promise<'retry' | 'menu'> {
 }
 
 async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu'> {
-  console.log(''); // Add spacing
-  console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
-  console.log(chalk.cyan('📱 Your app is now running on the device'));
-  console.log(''); // Add spacing
-  console.log(chalk.gray('───────────────────────────────────────'));
-  console.log(chalk.cyan('📋 View app logs in real-time'));
-  console.log(chalk.cyan('🔨 Build again to test changes'));
-  console.log(chalk.cyan('📱 Switch to different device'));
-  console.log(chalk.cyan('🏠 Return to main menu'));
-  console.log(chalk.gray('───────────────────────────────────────'));
-  console.log(''); // Add spacing
-  
-  const choice = await select({
-    message: 'What would you like to do next?',
-    choices: [
-      { name: '📋 Open Logcat', value: 'logcat' as const },
-      { name: '🔨 Build Again', value: 'build' as const },
-      { name: '📱 Select Different Device', value: 'device' as const },
-      { name: '🏠 Return to Main Menu', value: 'menu' as const },
-    ],
-  });
-  
-  switch (choice) {
-    case 'logcat':
-      await logcatCommand();
-      return choice;
-    case 'build':
-      return choice; // Will trigger another build in the next iteration
-    case 'device':
-      await deviceCommand();
-      return choice;
-    case 'menu':
-      return choice; // Will return to main menu in the next iteration
-    default:
-      return 'menu';
+  while (true) {
+    console.log(''); // Add spacing
+    console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
+    console.log(chalk.cyan('📱 Your app is now running on the device'));
+    console.log(''); // Add spacing
+    console.log(chalk.gray('───────────────────────────────────────'));
+    console.log(chalk.cyan('📋 View app logs in real-time'));
+    console.log(chalk.cyan('🔨 Build again to test changes'));
+    console.log(chalk.cyan('📱 Switch to different device'));
+    console.log(chalk.cyan('🏠 Return to main menu'));
+    console.log(chalk.gray('───────────────────────────────────────'));
+    console.log(''); // Add spacing
+    
+    const choice = await select({
+      message: 'What would you like to do next?',
+      choices: [
+        { name: '🔨 Build Again', value: 'build' as const },
+        { name: '📋 Open Logcat', value: 'logcat' as const },
+        { name: '📱 Select Different Device', value: 'device' as const },
+        { name: '🏠 Return to Main Menu', value: 'menu' as const },
+      ],
+    });
+    
+    switch (choice) {
+      case 'logcat':
+        await logcatCommand();
+        // Clear console and add a brief pause to let logcat terminal open
+        console.clear();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Continue the loop to show the success menu again
+        continue;
+      case 'build':
+        return choice; // Will trigger another build in the next iteration
+      case 'device':
+        await deviceCommand();
+        // Clear console after device command
+        console.clear();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Continue the loop to show the success menu again
+        continue;
+      case 'menu':
+        return choice; // Will return to main menu in the next iteration
+      default:
+        return 'menu';
+    }
   }
 }
 

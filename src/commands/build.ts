@@ -347,8 +347,8 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
     let variant = options.variant || config.defaultVariant;
     const availableVariants = project.getBuildVariants();
     
-    // If interactive mode and no variant specified, ask user
-    if (options.interactive && !options.variant) {
+    // Only ask for variant if no variant specified and no valid default exists
+    if (options.interactive && !options.variant && (!config.defaultVariant || !availableVariants.includes(config.defaultVariant))) {
       Logger.step('Select build variant:');
       
       const variantChoices = availableVariants.map(v => ({
@@ -359,16 +359,17 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
       variant = await select({
         message: 'Which variant would you like to build?',
         choices: variantChoices,
-        default: config.defaultVariant,
+        default: availableVariants[0], // Default to first available if no valid default
       });
       
-      // Update default variant in config if different
-      if (variant !== config.defaultVariant) {
-        config.defaultVariant = variant;
-        configManager.set(config);
-        await configManager.save();
-        Logger.success(`Default variant updated to: ${variant}`);
-      }
+      // Save the selected variant as the new default
+      config.defaultVariant = variant;
+      configManager.set(config);
+      await configManager.save();
+      Logger.success(`Default variant set to: ${variant}`);
+    } else if (!options.variant) {
+      // Using default variant from config
+      Logger.info(`Using default variant: ${variant}`);
     }
     
     if (!availableVariants.includes(variant)) {
