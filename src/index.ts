@@ -69,6 +69,7 @@ program
   .description('Build and run the Android app')
   .option('-v, --variant <variant>', 'Build variant (debug/release)', 'debug')
   .option('-d, --device <device>', 'Target device ID')
+  .option('-s, --stay', 'Stay alive after build for monitoring (press Ctrl+C to exit)')
   .action(wrapCommand(buildCommand));
 
 program

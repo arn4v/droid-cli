@@ -9,6 +9,8 @@ interface BuildOptions {
   variant?: string;
   device?: string;
   interactive?: boolean;
+  keepAlive?: boolean;
+  stay?: boolean;
 }
 
 export interface BuildResult {
@@ -112,7 +114,8 @@ async function launchAppAndComplete(
   adbManager: AdbManager,
   deviceId: string,
   packageName: string,
-  buildDuration: number
+  buildDuration: number,
+  keepAlive?: boolean
 ): Promise<BuildResult> {
   // Launch the app
   Logger.step('Launching app...');
@@ -127,9 +130,29 @@ async function launchAppAndComplete(
 
   Logger.success('Build and deployment completed successfully!');
   Logger.info(`Total time: ${(buildDuration / 1000).toFixed(1)}s`);
-  Logger.info('You can now run "droid-cli logcat" to view app logs.');
-
-  return { success: true };
+  
+  if (keepAlive) {
+    Logger.info('👁️  Staying alive for monitoring. Press Ctrl+C to exit.');
+    Logger.info('You can run "droid-cli logcat" in another terminal to view app logs.');
+    
+    // Keep the process alive indefinitely
+    return new Promise((resolve) => {
+      process.on('SIGINT', () => {
+        Logger.info('\nExiting...');
+        resolve({ success: true });
+        process.exit(0);
+      });
+      
+      process.on('SIGTERM', () => {
+        Logger.info('\nExiting...');
+        resolve({ success: true });
+        process.exit(0);
+      });
+    });
+  } else {
+    Logger.info('You can now run "droid-cli logcat" to view app logs.');
+    return { success: true };
+  }
 }
 
 async function handleInstallationFailure(
@@ -138,7 +161,8 @@ async function handleInstallationFailure(
   packageName: string, 
   installResult: InstallResult,
   apkPath: string,
-  buildDuration: number
+  buildDuration: number,
+  keepAlive?: boolean
 ): Promise<BuildResult> {
   Logger.error('Installation failed:', installResult.error || 'Unknown error');
   
@@ -157,10 +181,10 @@ async function handleInstallationFailure(
   // Offer automated solutions for specific error types
   switch (installResult.errorType) {
     case 'INSUFFICIENT_STORAGE':
-      return await handleInsufficientStorage(adbManager, deviceId, packageName, apkPath, buildDuration);
+      return await handleInsufficientStorage(adbManager, deviceId, packageName, apkPath, buildDuration, keepAlive);
     
     case 'DUPLICATE_PACKAGE':
-      return await handleDuplicatePackage(adbManager, deviceId, packageName, apkPath, buildDuration);
+      return await handleDuplicatePackage(adbManager, deviceId, packageName, apkPath, buildDuration, keepAlive);
     
     default:
       return {
@@ -175,7 +199,8 @@ async function handleInsufficientStorage(
   deviceId: string,
   packageName: string,
   apkPath: string,
-  buildDuration: number
+  buildDuration: number,
+  keepAlive?: boolean
 ): Promise<BuildResult> {
   console.log(''); // Add spacing
   
@@ -199,7 +224,7 @@ async function handleInsufficientStorage(
         
         if (retryResult.success) {
           Logger.success('APK installed successfully after uninstalling previous version!');
-          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration, keepAlive);
         } else {
           return {
             success: false,
@@ -223,7 +248,7 @@ async function handleInsufficientStorage(
         
         if (retryResult.success) {
           Logger.success('APK installed successfully after clearing app data!');
-          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration, keepAlive);
         } else {
           return {
             success: false,
@@ -257,7 +282,8 @@ async function handleDuplicatePackage(
   deviceId: string,
   packageName: string,
   apkPath: string,
-  buildDuration: number
+  buildDuration: number,
+  keepAlive?: boolean
 ): Promise<BuildResult> {
   console.log(''); // Add spacing
   
@@ -280,7 +306,7 @@ async function handleDuplicatePackage(
       
       if (installResult.success) {
         Logger.success('App force reinstalled successfully!');
-        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration, keepAlive);
       } else {
         return {
           success: false,
@@ -294,7 +320,7 @@ async function handleDuplicatePackage(
       
       if (clearSuccess) {
         Logger.success('App data cleared. The existing app is ready to use with new build.');
-        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration, keepAlive);
       } else {
         return {
           success: false,
@@ -452,11 +478,11 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
     const installResult = await adbManager.installApk(targetDevice.id, buildResult.apkPath);
     
     if (!installResult.success) {
-      return await handleInstallationFailure(adbManager, targetDevice.id, projectInfo.packageName, installResult, buildResult.apkPath, buildResult.duration);
+      return await handleInstallationFailure(adbManager, targetDevice.id, projectInfo.packageName, installResult, buildResult.apkPath, buildResult.duration, options.keepAlive || options.stay);
     }
 
     // Launch app and complete
-    return await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration);
+    return await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration, options.keepAlive || options.stay);
 
   } catch (error) {
     const errorMessage = `Build command failed: ${error instanceof Error ? error.message : String(error)}`;
