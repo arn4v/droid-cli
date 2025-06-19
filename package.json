@@ -1,6 +1,6 @@
 {
   "name": "droid-cli",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Interactive CLI for Android development, inspired by Expo CLI",
   "main": "dist/index.js",
   "bin": {
