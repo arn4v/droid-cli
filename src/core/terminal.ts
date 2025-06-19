@@ -63,7 +63,8 @@ export class TerminalManager {
 
     const title = options.title || 'Android CLI';
     const workingDirectory = options.workingDirectory || process.cwd();
-    const fullCommand = `${command} ${args.join(' ')}`;
+    const escapedArgs = args.map(arg => TerminalManager.escapeShellArg(arg));
+    const fullCommand = `${command} ${escapedArgs.join(' ')}`;
 
     Logger.debug(`Spawning terminal: ${terminal}, command: ${fullCommand}`);
 
@@ -166,5 +167,14 @@ export class TerminalManager {
         return available ? terminal : null;
       })
     ).then(results => results.filter((t): t is TerminalType => t !== null));
+  }
+
+  private static escapeShellArg(arg: string): string {
+    // If the argument contains special shell characters, quote it
+    if (/[*?\s'"$`\\|&;<>(){}[\]]/.test(arg)) {
+      // Use single quotes and escape any single quotes within the argument
+      return `'${arg.replace(/'/g, "'\"'\"'")}'`;
+    }
+    return arg;
   }
 }
