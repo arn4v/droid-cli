@@ -8,7 +8,12 @@ interface GradleOptions {
   args?: string;
 }
 
-export async function gradleCommand(task: string, options: GradleOptions = {}) {
+export interface GradleResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function gradleCommand(task: string, options: GradleOptions = {}): Promise<GradleResult> {
   try {
     Logger.step(`Running Gradle task: ${task}`);
 
@@ -19,14 +24,16 @@ export async function gradleCommand(task: string, options: GradleOptions = {}) {
     // Detect Android project
     const project = await AndroidProject.detect(configManager.getProjectPath());
     if (!project) {
-      Logger.error('No Android project found. Please run this command from an Android project directory or run "android-cli init" first.');
-      process.exit(1);
+      const error = 'No Android project found. Please run this command from an Android project directory or run "droid-cli init" first.';
+      Logger.error(error);
+      return { success: false, error };
     }
 
     const projectInfo = project.getInfo();
     if (!projectInfo) {
-      Logger.error('Failed to load Android project information.');
-      process.exit(1);
+      const error = 'Failed to load Android project information.';
+      Logger.error(error);
+      return { success: false, error };
     }
 
     Logger.info(`Found Android project: ${projectInfo.packageName}`);
@@ -43,16 +50,18 @@ export async function gradleCommand(task: string, options: GradleOptions = {}) {
       case 'clean':
         const cleanSuccess = await gradleWrapper.clean();
         if (!cleanSuccess) {
-          Logger.error('Clean task failed');
-          process.exit(1);
+          const error = 'Clean task failed';
+          Logger.error(error);
+          return { success: false, error };
         }
         break;
 
       case 'sync':
         const syncSuccess = await gradleWrapper.syncProject();
         if (!syncSuccess) {
-          Logger.error('Sync task failed');
-          process.exit(1);
+          const error = 'Sync task failed';
+          Logger.error(error);
+          return { success: false, error };
         }
         break;
 
@@ -105,17 +114,20 @@ export async function gradleCommand(task: string, options: GradleOptions = {}) {
         // Run custom task
         const taskSuccess = await gradleWrapper.runTask(task, additionalArgs);
         if (!taskSuccess) {
-          Logger.error(`Task '${task}' failed`);
-          process.exit(1);
+          const error = `Task '${task}' failed`;
+          Logger.error(error);
+          return { success: false, error };
         }
         break;
     }
 
     Logger.success('Gradle task completed successfully!');
+    return { success: true };
 
   } catch (error) {
+    const errorMessage = `Gradle command failed: ${error instanceof Error ? error.message : String(error)}`;
     Logger.error('Gradle command failed:', error);
-    process.exit(1);
+    return { success: false, error: errorMessage };
   }
 }
 

@@ -62,10 +62,10 @@ export async function initCommand() {
 
     Logger.success('Android Interactive CLI initialized successfully!');
     Logger.info('\nNext steps:');
-    Logger.info('  • Run "android-cli" to start interactive mode');
-    Logger.info('  • Run "android-cli build" to build and deploy your app');
-    Logger.info('  • Run "android-cli device" to select a target device');
-    Logger.info('  • Run "android-cli logcat" to view app logs');
+    Logger.info('  • Run "droid-cli" to start interactive mode');
+    Logger.info('  • Run "droid-cli build" to build and deploy your app');
+    Logger.info('  • Run "droid-cli device" to select a target device');
+    Logger.info('  • Run "droid-cli logcat" to view app logs');
 
   } catch (error) {
     Logger.error('Initialization failed:', error);
@@ -106,7 +106,7 @@ async function checkPrerequisites(): Promise<void> {
 
   if (!allGood) {
     console.log('\n' + chalk.red('Missing prerequisites detected!'));
-    console.log(chalk.yellow('Please install the missing tools and run "android-cli init" again.'));
+    console.log(chalk.yellow('Please install the missing tools and run "droid-cli init" again.'));
     process.exit(1);
   }
 

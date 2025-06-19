@@ -14,7 +14,7 @@ export async function variantCommand() {
     // Detect Android project
     const project = await AndroidProject.detect(configManager.getProjectPath());
     if (!project) {
-      Logger.error('No Android project found. Please run this command from an Android project directory or run "android-cli init" first.');
+      Logger.error('No Android project found. Please run this command from an Android project directory or run "droid-cli init" first.');
       process.exit(1);
     }
 

@@ -119,7 +119,7 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
     // Detect Android project
     const project = await AndroidProject.detect(configManager.getProjectPath());
     if (!project) {
-      const error = 'No Android project found. Please run this command from an Android project directory or run "android-cli init" first.';
+      const error = 'No Android project found. Please run this command from an Android project directory or run "droid-cli init" first.';
       Logger.error(error);
       return { success: false, error };
     }
@@ -258,7 +258,7 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
 
     Logger.success('Build and deployment completed successfully!');
     Logger.info(`Total time: ${(buildResult.duration / 1000).toFixed(1)}s`);
-    Logger.info('You can now run "android-cli logcat" to view app logs.');
+    Logger.info('You can now run "droid-cli logcat" to view app logs.');
 
     return { success: true };
 

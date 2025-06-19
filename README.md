@@ -1,4 +1,4 @@
-# Android Interactive CLI
+# Droid CLI
 
 A powerful, interactive CLI tool for Android development that brings the essential features of Android Studio to your terminal. Inspired by Expo CLI, this tool provides fast incremental builds, device management, and debugging without the heavy GUI overhead.
 
@@ -10,13 +10,13 @@ A powerful, interactive CLI tool for Android development that brings the essenti
 - 📋 **Logcat Integration** - Spawns terminal with filtered app logs
 - ⚙️ **Gradle Tasks** - Run common tasks like clean, sync, and custom tasks
 - 🎯 **Interactive Menu** - User-friendly menu system for all operations
-- 🛠️ **Configuration** - Project-specific settings via `android-cli.json`
+- 🛠️ **Configuration** - Project-specific settings via `droid-cli.json`
 - 🔄 **Auto-detection** - Automatically detects Android projects and devices
 
 ## Installation
 
 ```bash
-npm install -g android-interactive-cli
+npm install -g droid-cli
 ```
 
 ## Prerequisites
@@ -31,11 +31,11 @@ npm install -g android-interactive-cli
 1. Navigate to your Android project directory
 2. Initialize the CLI configuration:
    ```bash
-   android-cli init
+   droid-cli init
    ```
 3. Start the interactive menu:
    ```bash
-   android-cli
+   droid-cli
    ```
 
 ## Commands
@@ -45,14 +45,14 @@ npm install -g android-interactive-cli
 All commands support the `--project` (or `-p`) flag to specify the Android project directory:
 
 ```bash
-android-cli --project /path/to/android/project [command]
+droid-cli --project /path/to/android/project [command]
 ```
 
 This allows you to run the CLI from anywhere while targeting a specific project.
 
 ### Interactive Mode
 ```bash
-android-cli [--project <path>]
+droid-cli [--project <path>]
 ```
 Launches the main interactive menu with all available options.
 
@@ -60,43 +60,43 @@ Launches the main interactive menu with all available options.
 
 #### Build & Run
 ```bash
-android-cli build [--variant debug|release] [--device device-id] [--project <path>]
+droid-cli build [--variant debug|release] [--device device-id] [--project <path>]
 ```
 Builds the app and deploys it to the selected device.
 
 #### Device Management
 ```bash
-android-cli device [--project <path>]
+droid-cli device [--project <path>]
 ```
 List and select target devices/emulators.
 
 #### Logcat
 ```bash
-android-cli logcat [--device device-id] [--project <path>]
+droid-cli logcat [--device device-id] [--project <path>]
 ```
 Opens logcat in a new terminal window, filtered for your app.
 
 #### Gradle Tasks
 ```bash
-android-cli gradle <task> [--args "additional arguments"] [--project <path>]
+droid-cli gradle <task> [--args "additional arguments"] [--project <path>]
 ```
 Run any Gradle task with optional arguments.
 
 #### Initialize Configuration
 ```bash
-android-cli init [--project <path>]
+droid-cli init [--project <path>]
 ```
 Set up or reconfigure the CLI for your project.
 
 #### Build Variant Selection
 ```bash
-android-cli variant [--project <path>]
+droid-cli variant [--project <path>]
 ```
 Select the default build variant (debug/release) for the project.
 
 ## Configuration
 
-The CLI uses an `android-cli.json` file in your project root for configuration:
+The CLI uses an `droid-cli.json` file in your project root for configuration:
 
 ```json
 {
@@ -144,38 +144,38 @@ The CLI automatically detects and supports:
 
 1. **Morning Setup**:
    ```bash
-   android-cli device  # Select your preferred device
-   android-cli build   # Build and deploy
+   droid-cli device  # Select your preferred device
+   droid-cli build   # Build and deploy
    ```
 
 2. **Development Loop**:
    ```bash
-   android-cli         # Interactive menu
+   droid-cli         # Interactive menu
    # Select "Build & Run" for quick iterations
    # Select "Open Logcat" when debugging
    ```
 
 3. **Clean Builds**:
    ```bash
-   android-cli gradle clean
-   android-cli build
+   droid-cli gradle clean
+   droid-cli build
    ```
 
 ### CI/CD Integration
 
 ```bash
 # In your CI script
-android-cli gradle clean
-android-cli gradle assembleRelease
+droid-cli gradle clean
+droid-cli gradle assembleRelease
 ```
 
 ### Team Development
 
-Share the `android-cli.json` configuration with your team for consistent build settings.
+Share the `droid-cli.json` configuration with your team for consistent build settings.
 
 ## Comparison with Android Studio
 
-| Feature | Android Studio | Android Interactive CLI |
+| Feature | Android Studio | Droid CLI |
 |---------|---------------|------------------------|
 | Memory Usage | ~2-4 GB RAM | ~50-100 MB RAM |
 | Build Speed | Full IDE overhead | Direct Gradle execution |
@@ -194,7 +194,7 @@ Share the `android-cli.json` configuration with your team for consistent build s
    - Verify with: `adb version`
 
 2. **"No Android project found"**
-   - Run `android-cli init` in your project directory
+   - Run `droid-cli init` in your project directory
    - Ensure `build.gradle` and `settings.gradle` exist
 
 3. **Device not detected**
@@ -203,7 +203,7 @@ Share the `android-cli.json` configuration with your team for consistent build s
    - For emulators, ensure they're running
 
 4. **Build failures**
-   - Run `android-cli gradle clean`
+   - Run `droid-cli gradle clean`
    - Check Gradle wrapper permissions: `chmod +x gradlew`
    - Verify Java version compatibility
 
@@ -211,7 +211,7 @@ Share the `android-cli.json` configuration with your team for consistent build s
 
 Set environment variable for verbose logging:
 ```bash
-DEBUG=android-cli android-cli build
+DEBUG=droid-cli droid-cli build
 ```
 
 ## Contributing
@@ -226,8 +226,8 @@ DEBUG=android-cli android-cli build
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/android-interactive-cli.git
-cd android-interactive-cli
+git clone https://github.com/your-username/droid-cli.git
+cd droid-cli
 
 # Install dependencies
 yarn install
@@ -259,9 +259,9 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-- 📖 Documentation: [GitHub Wiki](https://github.com/your-username/android-interactive-cli/wiki)
-- 🐛 Bug Reports: [GitHub Issues](https://github.com/your-username/android-interactive-cli/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/your-username/android-interactive-cli/discussions)
+- 📖 Documentation: [GitHub Wiki](https://github.com/your-username/droid-cli/wiki)
+- 🐛 Bug Reports: [GitHub Issues](https://github.com/your-username/droid-cli/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/your-username/droid-cli/discussions)
 
 ---
 

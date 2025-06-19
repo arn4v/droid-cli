@@ -1,14 +1,14 @@
 {
-  "name": "android-interactive-cli",
+  "name": "droid-cli",
   "version": "1.0.0",
   "description": "Interactive CLI for Android development, inspired by Expo CLI",
   "main": "dist/index.js",
   "bin": {
-    "android-cli": "./dist/index.js"
+    "droid-cli": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node src/index.ts",
+    "dev": "bun src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
@@ -38,7 +38,6 @@
     "@typescript-eslint/parser": "^8.34.1",
     "eslint": "^9.29.0",
     "prettier": "^3.5.3",
-    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {

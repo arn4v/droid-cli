@@ -20,7 +20,7 @@ export async function logcatCommand(options: LogcatOptions = {}) {
     // Detect Android project
     const project = await AndroidProject.detect(configManager.getProjectPath());
     if (!project) {
-      Logger.error('No Android project found. Please run this command from an Android project directory or run "android-cli init" first.');
+      Logger.error('No Android project found. Please run this command from an Android project directory or run "droid-cli init" first.');
       process.exit(1);
     }
 
@@ -106,7 +106,7 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       const detectedTerminal = await TerminalManager.detectTerminal();
       if (!detectedTerminal) {
         Logger.error('No supported terminal detected');
-        Logger.info('Please set a specific terminal in your android-cli.json config');
+        Logger.info('Please set a specific terminal in your droid-cli.json config');
         process.exit(1);
       }
       terminalType = detectedTerminal;

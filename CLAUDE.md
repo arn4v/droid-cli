@@ -1,8 +1,11 @@
-# Android Interactive CLI - Project Instructions
+# Droid CLI - Project Instructions
+
+## Important Reminders
+- You run in an environment where `ast-grep` is available; whenever a search requires syntax-aware or structural matching, default to `ast-grep --lang rust -p '<pattern>'` (or set `--lang` appropriately) and avoid falling back to text-only tools like `rg` or `grep` unless I explicitly request a plain-text search.
 
 ## Project Overview
 
-This is **Android Interactive CLI**, a Node.js-based command-line tool that provides Android Studio's essential features in the terminal. It's inspired by Expo CLI and designed for developers who want fast Android development without the heavy GUI overhead of Android Studio.
+This is **Droid CLI**, a Node.js-based command-line tool that provides Android Studio's essential features in the terminal. It's inspired by Expo CLI and designed for developers who want fast Android development without the heavy GUI overhead of Android Studio.
 
 ## Tech Stack
 
@@ -75,7 +78,7 @@ src/
 - Optional log clearing on start
 
 ### 6. **Configuration System**
-- Project-specific `android-cli.json` configuration
+- Project-specific `droid-cli.json` configuration
 - Schema validation with Joi
 - Auto-detection of project settings
 - Persistent device selection
@@ -84,14 +87,14 @@ src/
 
 ```bash
 # Interactive mode
-android-cli [--project <path>]
+droid-cli [--project <path>]
 
 # Direct commands
-android-cli build [--variant debug|release] [--device <id>] [--project <path>]
-android-cli device [--project <path>]
-android-cli logcat [--device <id>] [--project <path>]
-android-cli gradle <task> [--args <args>] [--project <path>]
-android-cli init [--project <path>]
+droid-cli build [--variant debug|release] [--device <id>] [--project <path>]
+droid-cli device [--project <path>]
+droid-cli logcat [--device <id>] [--project <path>]
+droid-cli gradle <task> [--args <args>] [--project <path>]
+droid-cli init [--project <path>]
 ```
 
 ## Configuration Schema
@@ -194,7 +197,7 @@ The CLI has been tested with the RemNote Android project and successfully:
 ## Publishing
 
 The project is configured for npm publishing with:
-- Binary name: `android-cli`
+- Binary name: `droid-cli`
 - Entry point: `dist/index.js`
 - Files included: `dist/`, `README.md`
 - Engines: Node.js >=14.0.0

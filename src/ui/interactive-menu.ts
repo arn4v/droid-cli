@@ -1,15 +1,50 @@
-import { select } from '@inquirer/prompts';
+import { select, confirm, rawlist, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { Logger } from './logger';
 import { buildCommand } from '../commands/build';
 import { deviceCommand } from '../commands/device';
 import { logcatCommand } from '../commands/logcat';
-import { gradleCommand, selectGradleTask } from '../commands/gradle';
+import { gradleCommand, selectGradleTask, GradleResult } from '../commands/gradle';
 import { initCommand } from '../commands/init';
 import { variantCommand } from '../commands/variant';
 import { ConfigManager } from '../config/config-manager';
 import { AndroidProject } from '../core/android-project';
 import { AdbManager } from '../core/adb';
+
+async function handleTaskFailure(taskName: string, error: string): Promise<'retry' | 'menu'> {
+  console.log(''); // Add spacing
+  Logger.error(`${taskName} failed:`, error);
+  console.log(''); // Add spacing
+  console.log(chalk.gray('───────────────────────────────────────'));
+  console.log(chalk.cyan('🔄 Press r to retry'));
+  console.log(chalk.cyan('🏠 Press x to return to main menu'));
+  console.log(chalk.gray('───────────────────────────────────────'));
+  console.log(''); // Add spacing
+  
+  while (true) {
+    const choice = await input({
+      message: 'Enter your choice (r/x):',
+      validate: (input: string) => {
+        const choice = input.toLowerCase().trim();
+        if (choice === 'r' || choice === 'x') {
+          return true;
+        }
+        return 'Please enter "r" to retry or "x" to return to main menu';
+      },
+    });
+    
+    const normalizedChoice = choice.toLowerCase().trim();
+    if (normalizedChoice === 'r') {
+      return 'retry';
+    } else if (normalizedChoice === 'x') {
+      return 'menu';
+    }
+  }
+}
+
+async function handleBuildFailure(error: string): Promise<'retry' | 'menu'> {
+  return handleTaskFailure('Build', error);
+}
 
 export async function interactiveMenu(): Promise<void> {
   while (true) {
@@ -34,14 +69,22 @@ export async function interactiveMenu(): Promise<void> {
       console.log(''); // Add spacing
 
       switch (choice) {
-        case 'build':
-          const buildResult = await buildCommand({ interactive: true });
-          if (!buildResult.success) {
-            Logger.error('Build failed:', buildResult.error);
-            Logger.info('Press any key to return to menu...');
-            // Don't exit, just continue to next iteration
+        case 'build': {
+          let buildSuccess = false;
+          while (!buildSuccess) {
+            const buildResult = await buildCommand({ interactive: true });
+            if (buildResult.success) {
+              buildSuccess = true;
+            } else {
+              const action = await handleBuildFailure(buildResult.error || 'Unknown error');
+              if (action === 'menu') {
+                break; // Exit the retry loop and return to main menu
+              }
+              // If action is 'retry', the loop continues
+            }
           }
           break;
+        }
         case 'device':
           await deviceCommand();
           break;
@@ -51,22 +94,59 @@ export async function interactiveMenu(): Promise<void> {
         case 'logcat':
           await logcatCommand();
           break;
-        case 'gradle':
+        case 'gradle': {
           const task = await selectGradleTask();
-          await gradleCommand(task);
+          let taskSuccess = false;
+          while (!taskSuccess) {
+            const result = await gradleCommand(task);
+            if (result.success) {
+              taskSuccess = true;
+            } else {
+              const action = await handleTaskFailure(`Gradle task '${task}'`, result.error || 'Unknown error');
+              if (action === 'menu') {
+                break;
+              }
+            }
+          }
           break;
-        case 'clean':
-          await gradleCommand('clean');
+        }
+        case 'clean': {
+          let cleanSuccess = false;
+          while (!cleanSuccess) {
+            const result = await gradleCommand('clean');
+            if (result.success) {
+              cleanSuccess = true;
+            } else {
+              const action = await handleTaskFailure('Clean', result.error || 'Unknown error');
+              if (action === 'menu') {
+                break;
+              }
+            }
+          }
           break;
-        case 'sync':
-          await gradleCommand('sync');
+        }
+        case 'sync': {
+          let syncSuccess = false;
+          while (!syncSuccess) {
+            const result = await gradleCommand('sync');
+            if (result.success) {
+              syncSuccess = true;
+            } else {
+              const action = await handleTaskFailure('Sync', result.error || 'Unknown error');
+              if (action === 'menu') {
+                break;
+              }
+            }
+          }
           break;
+        }
         case 'config':
           await initCommand();
           break;
         case 'exit':
           Logger.info('Goodbye! 👋');
           process.exit(0);
+          break;
         default:
           Logger.error('Invalid choice');
       }
@@ -85,7 +165,7 @@ export async function interactiveMenu(): Promise<void> {
 
 async function displayStatus(): Promise<void> {
   console.clear();
-  console.log(chalk.cyan.bold('🤖 Android Interactive CLI'));
+  console.log(chalk.cyan.bold('🤖 Droid CLI'));
   console.log(chalk.gray('─'.repeat(50)));
 
   try {

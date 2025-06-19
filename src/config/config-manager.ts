@@ -12,7 +12,7 @@ export class ConfigManager {
 
   private constructor(projectRoot: string = process.cwd()) {
     this.projectRoot = projectRoot;
-    this.configPath = path.join(projectRoot, 'android-cli.json');
+    this.configPath = path.join(projectRoot, 'droid-cli.json');
     this.config = { ...defaultConfig };
   }
 

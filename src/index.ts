@@ -15,7 +15,7 @@ import { ConfigManager } from './config/config-manager';
 const program = new Command();
 
 program
-  .name('android-cli')
+  .name('droid-cli')
   .description('Interactive CLI for Android development')
   .version('1.0.0')
   .option('-p, --project <path>', 'Path to Android project directory');
@@ -91,7 +91,7 @@ program
 
 program
   .command('init')
-  .description('Initialize android-cli configuration')
+  .description('Initialize droid-cli configuration')
   .action(wrapCommand(initCommand));
 
 program
