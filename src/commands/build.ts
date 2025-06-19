@@ -16,6 +16,7 @@ interface BuildOptions {
 export interface BuildResult {
   success: boolean;
   error?: string;
+  shouldContinue?: boolean;
 }
 
 async function ensureDeviceAvailable(adbManager: AdbManager, options: BuildOptions): Promise<{ success: boolean; error?: string }> {
@@ -132,23 +133,41 @@ async function launchAppAndComplete(
   Logger.info(`Total time: ${(buildDuration / 1000).toFixed(1)}s`);
   
   if (keepAlive) {
-    Logger.info('👁️  Staying alive for monitoring. Press Ctrl+C to exit.');
-    Logger.info('You can run "droid-cli logcat" in another terminal to view app logs.');
+    // Import and use the interactive menu success handler
+    const { handleBuildSuccess } = await import('../ui/interactive-menu');
     
-    // Keep the process alive indefinitely
-    return new Promise((resolve) => {
-      process.on('SIGINT', () => {
-        Logger.info('\nExiting...');
-        resolve({ success: true });
-        process.exit(0);
-      });
-      
-      process.on('SIGTERM', () => {
-        Logger.info('\nExiting...');
-        resolve({ success: true });
-        process.exit(0);
-      });
-    });
+    while (true) {
+      try {
+        const nextAction = await handleBuildSuccess();
+        
+        switch (nextAction) {
+          case 'build':
+            // Return to trigger another build cycle
+            return { success: true, shouldContinue: true };
+          case 'logcat':
+            const { logcatCommand } = await import('./logcat');
+            await logcatCommand();
+            // Continue the loop to show menu again
+            break;
+          case 'device':
+            const { deviceCommand } = await import('./device');
+            await deviceCommand();
+            // Continue the loop to show menu again
+            break;
+          case 'menu':
+            Logger.info('Exiting build mode...');
+            return { success: true };
+        }
+      } catch (error) {
+        // Handle Ctrl+C (SIGINT) gracefully
+        if (error && (error as any).name === 'ExitPromptError') {
+          Logger.info('\nExiting build mode...');
+          return { success: true };
+        }
+        // Re-throw other errors
+        throw error;
+      }
+    }
   } else {
     Logger.info('You can now run "droid-cli logcat" to view app logs.');
     return { success: true };
@@ -344,15 +363,18 @@ async function handleDuplicatePackage(
 }
 
 export async function buildCommand(options: BuildOptions = {}): Promise<BuildResult> {
-  try {
-    Logger.step('Starting Android build process...');
+  const keepAlive = options.keepAlive || options.stay;
+  
+  while (true) {
+    try {
+      Logger.step('Starting Android build process...');
 
-    // Load configuration
-    const configManager = ConfigManager.getInstance();
-    const config = await configManager.load();
+      // Load configuration
+      const configManager = ConfigManager.getInstance();
+      const config = await configManager.load();
 
-    // Detect Android project
-    const project = await AndroidProject.detect(configManager.getProjectPath());
+      // Detect Android project
+      const project = await AndroidProject.detect(configManager.getProjectPath());
     if (!project) {
       const error = 'No Android project found. Please run this command from an Android project directory or run "droid-cli init" first.';
       Logger.error(error);
@@ -481,12 +503,45 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
       return await handleInstallationFailure(adbManager, targetDevice.id, projectInfo.packageName, installResult, buildResult.apkPath, buildResult.duration, options.keepAlive || options.stay);
     }
 
-    // Launch app and complete
-    return await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration, options.keepAlive || options.stay);
-
-  } catch (error) {
-    const errorMessage = `Build command failed: ${error instanceof Error ? error.message : String(error)}`;
-    Logger.error('Build command failed:', error);
-    return { success: false, error: errorMessage };
+      // Launch app and complete
+      const result = await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration, keepAlive);
+      
+      // If not in keep-alive mode, or if shouldContinue is false, exit the loop
+      if (!keepAlive || !result.shouldContinue) {
+        return result;
+      }
+      
+      // Otherwise, continue the loop for another build cycle
+      console.log(''); // Add spacing before next build
+      
+    } catch (error) {
+      const errorMessage = `Build command failed: ${error instanceof Error ? error.message : String(error)}`;
+      Logger.error('Build command failed:', error);
+      
+      if (!keepAlive) {
+        return { success: false, error: errorMessage };
+      }
+      
+      // In keep-alive mode, ask user what to do on error
+      console.log(''); // Add spacing
+      Logger.error('Build failed:', errorMessage);
+      
+      try {
+        const { handleBuildFailure } = await import('../ui/interactive-menu');
+        const action = await handleBuildFailure(errorMessage);
+        
+        if (action === 'menu') {
+          return { success: false, error: errorMessage };
+        }
+        // If action is 'retry', continue the loop
+      } catch (promptError) {
+        // Handle Ctrl+C during error handling
+        if (promptError && (promptError as any).name === 'ExitPromptError') {
+          Logger.info('\nExiting build mode...');
+          return { success: false, error: errorMessage };
+        }
+        throw promptError;
+      }
+    }
   }
 }

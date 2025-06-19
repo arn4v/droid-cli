@@ -42,11 +42,11 @@ async function handleTaskFailure(taskName: string, error: string): Promise<'retr
   }
 }
 
-async function handleBuildFailure(error: string): Promise<'retry' | 'menu'> {
+export async function handleBuildFailure(error: string): Promise<'retry' | 'menu'> {
   return handleTaskFailure('Build', error);
 }
 
-async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu'> {
+export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu'> {
   while (true) {
     console.log(''); // Add spacing
     console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
