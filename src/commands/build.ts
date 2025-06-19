@@ -1,7 +1,7 @@
 import { Logger } from '../ui/logger';
 import { AndroidProject } from '../core/android-project';
 import { GradleWrapper } from '../core/gradle-wrapper';
-import { AdbManager } from '../core/adb';
+import { AdbManager, InstallResult } from '../core/adb';
 import { ConfigManager } from '../config/config-manager';
 import { select, confirm } from '@inquirer/prompts';
 
@@ -106,6 +106,215 @@ async function ensureDeviceAvailable(adbManager: AdbManager, options: BuildOptio
   }
 
   return { success: true };
+}
+
+async function launchAppAndComplete(
+  adbManager: AdbManager,
+  deviceId: string,
+  packageName: string,
+  buildDuration: number
+): Promise<BuildResult> {
+  // Launch the app
+  Logger.step('Launching app...');
+  const launchSuccess = await adbManager.launchApp(deviceId, packageName);
+  
+  if (!launchSuccess) {
+    Logger.warn('App installed but failed to launch automatically.');
+    Logger.info('You can manually launch the app from the device.');
+  } else {
+    Logger.success('App launched successfully!');
+  }
+
+  Logger.success('Build and deployment completed successfully!');
+  Logger.info(`Total time: ${(buildDuration / 1000).toFixed(1)}s`);
+  Logger.info('You can now run "droid-cli logcat" to view app logs.');
+
+  return { success: true };
+}
+
+async function handleInstallationFailure(
+  adbManager: AdbManager, 
+  deviceId: string, 
+  packageName: string, 
+  installResult: InstallResult,
+  apkPath: string,
+  buildDuration: number
+): Promise<BuildResult> {
+  Logger.error('Installation failed:', installResult.error || 'Unknown error');
+  
+  if (installResult.suggestion) {
+    Logger.info('💡 Suggestion:', installResult.suggestion);
+  }
+
+  // Show device storage info for storage-related errors
+  if (installResult.errorType === 'INSUFFICIENT_STORAGE') {
+    const storageInfo = await adbManager.getStorageInfo(deviceId);
+    if (storageInfo) {
+      Logger.info(`📊 Device storage: ${storageInfo.available} available of ${storageInfo.total} total`);
+    }
+  }
+
+  // Offer automated solutions for specific error types
+  switch (installResult.errorType) {
+    case 'INSUFFICIENT_STORAGE':
+      return await handleInsufficientStorage(adbManager, deviceId, packageName, apkPath, buildDuration);
+    
+    case 'DUPLICATE_PACKAGE':
+      return await handleDuplicatePackage(adbManager, deviceId, packageName, apkPath, buildDuration);
+    
+    default:
+      return {
+        success: false,
+        error: installResult.error || 'APK installation failed'
+      };
+  }
+}
+
+async function handleInsufficientStorage(
+  adbManager: AdbManager,
+  deviceId: string,
+  packageName: string,
+  apkPath: string,
+  buildDuration: number
+): Promise<BuildResult> {
+  console.log(''); // Add spacing
+  
+  const choice = await select({
+    message: 'How would you like to resolve the storage issue?',
+    choices: [
+      { name: '🗑️  Uninstall the existing app and retry', value: 'uninstall' },
+      { name: '📱 Clear app data and retry', value: 'clear' },
+      { name: '❌ Skip installation (build completed)', value: 'skip' },
+    ],
+  });
+
+  switch (choice) {
+    case 'uninstall':
+      Logger.step('Uninstalling existing app...');
+      const uninstallSuccess = await adbManager.uninstallApp(deviceId, packageName);
+      
+      if (uninstallSuccess) {
+        Logger.step('Retrying installation...');
+        const retryResult = await adbManager.installApk(deviceId, apkPath);
+        
+        if (retryResult.success) {
+          Logger.success('APK installed successfully after uninstalling previous version!');
+          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+        } else {
+          return {
+            success: false,
+            error: `Installation failed again: ${retryResult.error}`
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Failed to uninstall existing app'
+        };
+      }
+
+    case 'clear':
+      Logger.step('Clearing app data...');
+      const clearSuccess = await adbManager.clearAppData(deviceId, packageName);
+      
+      if (clearSuccess) {
+        Logger.step('Retrying installation...');
+        const retryResult = await adbManager.installApk(deviceId, apkPath);
+        
+        if (retryResult.success) {
+          Logger.success('APK installed successfully after clearing app data!');
+          return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+        } else {
+          return {
+            success: false,
+            error: `Installation failed again: ${retryResult.error}`
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Failed to clear app data'
+        };
+      }
+
+    case 'skip':
+      Logger.warn('Installation skipped. Build completed but app not installed.');
+      return {
+        success: false,
+        error: 'Installation skipped due to insufficient storage'
+      };
+
+    default:
+      return {
+        success: false,
+        error: 'Invalid choice'
+      };
+  }
+}
+
+async function handleDuplicatePackage(
+  adbManager: AdbManager,
+  deviceId: string,
+  packageName: string,
+  apkPath: string,
+  buildDuration: number
+): Promise<BuildResult> {
+  console.log(''); // Add spacing
+  
+  const choice = await select({
+    message: 'The app is already installed. How would you like to proceed?',
+    choices: [
+      { name: '🔄 Force reinstall (uninstall + install)', value: 'force' },
+      { name: '📱 Clear app data and update', value: 'clear' },
+      { name: '❌ Skip installation', value: 'skip' },
+    ],
+  });
+
+  switch (choice) {
+    case 'force':
+      Logger.step('Force reinstalling app...');
+      await adbManager.uninstallApp(deviceId, packageName);
+      
+      Logger.step('Installing new version...');
+      const installResult = await adbManager.installApk(deviceId, apkPath);
+      
+      if (installResult.success) {
+        Logger.success('App force reinstalled successfully!');
+        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+      } else {
+        return {
+          success: false,
+          error: `Force reinstall failed: ${installResult.error}`
+        };
+      }
+
+    case 'clear':
+      Logger.step('Clearing app data...');
+      const clearSuccess = await adbManager.clearAppData(deviceId, packageName);
+      
+      if (clearSuccess) {
+        Logger.success('App data cleared. The existing app is ready to use with new build.');
+        return await launchAppAndComplete(adbManager, deviceId, packageName, buildDuration);
+      } else {
+        return {
+          success: false,
+          error: 'Failed to clear app data'
+        };
+      }
+
+    case 'skip':
+      Logger.info('Installation skipped. The existing app version remains installed.');
+      return {
+        success: false,
+        error: 'Installation skipped - app already exists'
+      };
+
+    default:
+      return {
+        success: false,
+        error: 'Invalid choice'
+      };
+  }
 }
 
 export async function buildCommand(options: BuildOptions = {}): Promise<BuildResult> {
@@ -239,28 +448,14 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
 
     // Install APK on device
     Logger.step('Installing APK on device...');
-    const installSuccess = await adbManager.installApk(targetDevice.id, buildResult.apkPath);
+    const installResult = await adbManager.installApk(targetDevice.id, buildResult.apkPath);
     
-    if (!installSuccess) {
-      const error = 'Failed to install APK on device.';
-      Logger.error(error);
-      return { success: false, error };
+    if (!installResult.success) {
+      return await handleInstallationFailure(adbManager, targetDevice.id, projectInfo.packageName, installResult, buildResult.apkPath, buildResult.duration);
     }
 
-    // Launch the app
-    Logger.step('Launching app...');
-    const launchSuccess = await adbManager.launchApp(targetDevice.id, projectInfo.packageName);
-    
-    if (!launchSuccess) {
-      Logger.warn('App installed but failed to launch automatically.');
-      Logger.info('You can manually launch the app from the device.');
-    }
-
-    Logger.success('Build and deployment completed successfully!');
-    Logger.info(`Total time: ${(buildResult.duration / 1000).toFixed(1)}s`);
-    Logger.info('You can now run "droid-cli logcat" to view app logs.');
-
-    return { success: true };
+    // Launch app and complete
+    return await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration);
 
   } catch (error) {
     const errorMessage = `Build command failed: ${error instanceof Error ? error.message : String(error)}`;

@@ -46,6 +46,45 @@ async function handleBuildFailure(error: string): Promise<'retry' | 'menu'> {
   return handleTaskFailure('Build', error);
 }
 
+async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu'> {
+  console.log(''); // Add spacing
+  console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
+  console.log(chalk.cyan('📱 Your app is now running on the device'));
+  console.log(''); // Add spacing
+  console.log(chalk.gray('───────────────────────────────────────'));
+  console.log(chalk.cyan('📋 View app logs in real-time'));
+  console.log(chalk.cyan('🔨 Build again to test changes'));
+  console.log(chalk.cyan('📱 Switch to different device'));
+  console.log(chalk.cyan('🏠 Return to main menu'));
+  console.log(chalk.gray('───────────────────────────────────────'));
+  console.log(''); // Add spacing
+  
+  const choice = await select({
+    message: 'What would you like to do next?',
+    choices: [
+      { name: '📋 Open Logcat', value: 'logcat' as const },
+      { name: '🔨 Build Again', value: 'build' as const },
+      { name: '📱 Select Different Device', value: 'device' as const },
+      { name: '🏠 Return to Main Menu', value: 'menu' as const },
+    ],
+  });
+  
+  switch (choice) {
+    case 'logcat':
+      await logcatCommand();
+      return choice;
+    case 'build':
+      return choice; // Will trigger another build in the next iteration
+    case 'device':
+      await deviceCommand();
+      return choice;
+    case 'menu':
+      return choice; // Will return to main menu in the next iteration
+    default:
+      return 'menu';
+  }
+}
+
 export async function interactiveMenu(): Promise<void> {
   while (true) {
     try {
@@ -70,15 +109,24 @@ export async function interactiveMenu(): Promise<void> {
 
       switch (choice) {
         case 'build': {
-          let buildSuccess = false;
-          while (!buildSuccess) {
+          let continueBuildFlow = true;
+          while (continueBuildFlow) {
             const buildResult = await buildCommand({ interactive: true });
             if (buildResult.success) {
-              buildSuccess = true;
+              const nextAction = await handleBuildSuccess();
+              if (nextAction === 'menu') {
+                continueBuildFlow = false; // Exit build flow and return to main menu
+              } else if (nextAction === 'build') {
+                // Continue the loop for another build
+                continue;
+              } else {
+                // For logcat or device commands, we've handled them and can exit build flow
+                continueBuildFlow = false;
+              }
             } else {
               const action = await handleBuildFailure(buildResult.error || 'Unknown error');
               if (action === 'menu') {
-                break; // Exit the retry loop and return to main menu
+                continueBuildFlow = false; // Exit build flow and return to main menu
               }
               // If action is 'retry', the loop continues
             }

@@ -2,6 +2,13 @@ import { ProcessManager } from '../utils/process';
 import { Logger } from '../ui/logger';
 import { Validators } from '../utils/validators';
 
+export interface InstallResult {
+  success: boolean;
+  error?: string;
+  errorType?: 'INSUFFICIENT_STORAGE' | 'DUPLICATE_PACKAGE' | 'PERMISSION_DENIED' | 'INVALID_APK' | 'UNKNOWN';
+  suggestion?: string;
+}
+
 export interface AndroidDevice {
   id: string;
   name: string;
@@ -153,9 +160,14 @@ export class AdbManager {
     return properties;
   }
 
-  async installApk(deviceId: string, apkPath: string): Promise<boolean> {
+  async installApk(deviceId: string, apkPath: string): Promise<InstallResult> {
     if (!(await this.checkAdbAvailable())) {
-      return false;
+      return {
+        success: false,
+        error: 'ADB is not available',
+        errorType: 'UNKNOWN',
+        suggestion: 'Please ensure Android SDK is installed and ADB is in PATH'
+      };
     }
 
     try {
@@ -168,15 +180,136 @@ export class AdbManager {
 
       if (result.success) {
         Logger.success(`APK installed successfully on ${deviceId}`);
-        return true;
+        return { success: true };
       } else {
-        Logger.error(`Failed to install APK on ${deviceId}:`, result.stderr);
-        return false;
+        const errorOutput = result.stderr || result.stdout || '';
+        Logger.error(`Failed to install APK on ${deviceId}:`, errorOutput);
+        
+        return this.analyzeInstallError(errorOutput);
       }
     } catch (error) {
       Logger.error('Error installing APK:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        errorType: 'UNKNOWN',
+        suggestion: 'Check that the device is connected and the APK file exists'
+      };
+    }
+  }
+
+  private analyzeInstallError(errorOutput: string): InstallResult {
+    const error = errorOutput.toLowerCase();
+
+    if (error.includes('install_failed_insufficient_storage')) {
+      return {
+        success: false,
+        error: errorOutput,
+        errorType: 'INSUFFICIENT_STORAGE',
+        suggestion: 'The device is running out of storage space. Try uninstalling unused apps or clearing app data.'
+      };
+    }
+
+    if (error.includes('install_failed_already_exists') || error.includes('install_failed_duplicate_package')) {
+      return {
+        success: false,
+        error: errorOutput,
+        errorType: 'DUPLICATE_PACKAGE',
+        suggestion: 'The app is already installed. Try uninstalling it first or use the force reinstall option.'
+      };
+    }
+
+    if (error.includes('install_failed_invalid_apk') || error.includes('failed to parse')) {
+      return {
+        success: false,
+        error: errorOutput,
+        errorType: 'INVALID_APK',
+        suggestion: 'The APK file is corrupted or invalid. Try rebuilding the project.'
+      };
+    }
+
+    if (error.includes('permission denied') || error.includes('install_failed_user_restricted')) {
+      return {
+        success: false,
+        error: errorOutput,
+        errorType: 'PERMISSION_DENIED',
+        suggestion: 'Installation blocked by device security. Enable "Install from unknown sources" or check device permissions.'
+      };
+    }
+
+    return {
+      success: false,
+      error: errorOutput,
+      errorType: 'UNKNOWN',
+      suggestion: 'Check device connection and try again. If the problem persists, try restarting ADB or the device.'
+    };
+  }
+
+  async uninstallApp(deviceId: string, packageName: string): Promise<boolean> {
+    if (!(await this.checkAdbAvailable())) {
       return false;
     }
+
+    try {
+      Logger.info(`Uninstalling ${packageName} from ${deviceId}...`);
+      
+      const result = await ProcessManager.run('adb', [
+        '-s', deviceId,
+        'uninstall', packageName
+      ]);
+
+      if (result.success) {
+        Logger.success(`${packageName} uninstalled successfully from ${deviceId}`);
+        return true;
+      }
+      
+      Logger.warn(`Could not uninstall ${packageName}:`, result.stderr);
+      return false;
+    } catch (error) {
+      Logger.error('Error uninstalling app:', error);
+      return false;
+    }
+  }
+
+  async getStorageInfo(deviceId: string): Promise<{ total: string; available: string } | null> {
+    if (!(await this.checkAdbAvailable())) {
+      return null;
+    }
+
+    try {
+      const result = await ProcessManager.run('adb', [
+        '-s', deviceId,
+        'shell', 'df', '/data'
+      ]);
+
+      if (result.success) {
+        // Parse df output to get storage info
+        const lines = result.stdout.split('\n');
+        const dataLine = lines.find(line => line.includes('/data'));
+        
+        if (dataLine) {
+          const parts = dataLine.split(/\s+/);
+          if (parts.length >= 4) {
+            const total = this.formatBytes(Number.parseInt(parts[1]) * 1024);
+            const available = this.formatBytes(Number.parseInt(parts[3]) * 1024);
+            return { total, available };
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      Logger.debug('Error getting storage info:', error);
+      return null;
+    }
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   }
 
   async launchApp(deviceId: string, packageName: string, activityName?: string): Promise<boolean> {
