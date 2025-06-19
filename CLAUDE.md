@@ -65,6 +65,7 @@ src/
 - Device state management (device/offline/unauthorized)
 - **Emulator Management**: Detects available AVDs and can start emulators
 - **Smart Device Handling**: Offers to start emulator when no physical devices connected
+- **React Native Support**: Automatic `adb reverse` port forwarding for Metro bundler (physical devices only)
 
 ### 4. **Gradle Integration**
 - Incremental builds using Gradle's build cache
@@ -107,6 +108,7 @@ droid-cli init [--project <path>]
   "gradleTasks": { "custom": [] },
   "buildCache": { "enabled": true, "maxSize": "1GB" },
   "logcat": { "clearOnStart": true, "colorize": true },
+  "adbReverse": { "enabled": false, "ports": [8081] },
   "selectedDevice": "device-id"
 }
 ```

@@ -503,6 +503,16 @@ export async function buildCommand(options: BuildOptions = {}): Promise<BuildRes
       return await handleInstallationFailure(adbManager, targetDevice.id, projectInfo.packageName, installResult, buildResult.apkPath, buildResult.duration, options.keepAlive || options.stay);
     }
 
+    // Set up adb reverse if enabled (only for physical devices, not emulators)
+    if (config.adbReverse?.enabled && config.adbReverse.ports.length > 0) {
+      const isEmulator = targetDevice.id.startsWith('emulator-') || targetDevice.name.toLowerCase().includes('emulator');
+      if (!isEmulator) {
+        await adbManager.setupAdbReverse(targetDevice.id, config.adbReverse.ports);
+      } else {
+        Logger.info('Skipping adb reverse for emulator (emulators can access localhost directly)');
+      }
+    }
+
       // Launch app and complete
       const result = await launchAppAndComplete(adbManager, targetDevice.id, projectInfo.packageName, buildResult.duration, keepAlive);
       

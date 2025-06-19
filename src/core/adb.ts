@@ -509,6 +509,33 @@ export class AdbManager {
     }
   }
 
+  async setupAdbReverse(deviceId: string, ports: number[]): Promise<boolean> {
+    try {
+      Logger.step('Setting up port forwarding...');
+      
+      for (const port of ports) {
+        Logger.info(`Setting up adb reverse for port ${port}...`);
+        
+        const result = await ProcessManager.run('adb', [
+          '-s', deviceId,
+          'reverse', `tcp:${port}`, `tcp:${port}`
+        ]);
+
+        if (result.success) {
+          Logger.success(`Port forwarding set up: device:${port} -> host:${port}`);
+        } else {
+          Logger.warn(`Failed to set up port forwarding for port ${port}: ${result.stderr}`);
+          // Continue with other ports even if one fails
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      Logger.error('Error setting up adb reverse:', error);
+      return false;
+    }
+  }
+
   async checkEmulatorCommand(): Promise<boolean> {
     return await ProcessManager.checkCommand('emulator');
   }

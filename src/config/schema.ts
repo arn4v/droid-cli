@@ -15,6 +15,10 @@ export interface AndroidCliConfig {
     clearOnStart: boolean;
     colorize: boolean;
   };
+  adbReverse: {
+    enabled: boolean;
+    ports: number[];
+  };
   selectedDevice?: string;
 }
 
@@ -33,6 +37,10 @@ export const androidCliConfigSchema = Joi.object<AndroidCliConfig>({
     clearOnStart: Joi.boolean().default(true).description('Clear logcat on start'),
     colorize: Joi.boolean().default(true).description('Colorize logcat output'),
   }).default({ clearOnStart: true, colorize: true }),
+  adbReverse: Joi.object({
+    enabled: Joi.boolean().default(false).description('Enable automatic adb reverse port forwarding'),
+    ports: Joi.array().items(Joi.number().port()).default([8081]).description('Ports to forward (e.g., [8081] for React Native Metro)'),
+  }).default({ enabled: false, ports: [8081] }),
   selectedDevice: Joi.string().optional().description('Last selected device ID'),
 });
 
@@ -50,5 +58,9 @@ export const defaultConfig: AndroidCliConfig = {
   logcat: {
     clearOnStart: true,
     colorize: true,
+  },
+  adbReverse: {
+    enabled: false,
+    ports: [8081],
   },
 };

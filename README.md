@@ -128,6 +128,10 @@ The CLI uses an `droid-cli.json` file in your project root for configuration:
     "clearOnStart": true,
     "colorize": true
   },
+  "adbReverse": {
+    "enabled": false,
+    "ports": [8081]
+  },
   "selectedDevice": "emulator-5554"
 }
 ```
@@ -142,40 +146,9 @@ The CLI uses an `droid-cli.json` file in your project root for configuration:
 - **`buildCache.maxSize`** - Maximum cache size
 - **`logcat.clearOnStart`** - Clear logcat before starting new session
 - **`logcat.colorize`** - Enable colored logcat output
+- **`adbReverse.enabled`** - Automatically run `adb reverse` for React Native development
+- **`adbReverse.ports`** - Ports to forward from device to host (e.g., [8081] for Metro bundler)
 - **`selectedDevice`** - Last selected device (auto-saved)
-
-## Supported Terminals
-
-The CLI automatically detects and supports:
-
-- **macOS**: iTerm2, Terminal.app
-- **Linux**: gnome-terminal, konsole, xterm
-- **Windows**: Windows Terminal
-
-## Use Cases
-
-### Daily Development Workflow
-
-1. **Morning Setup**:
-
-   ```bash
-   droid-cli device  # Select your preferred device
-   droid-cli build   # Build and run
-   ```
-
-2. **Development Loop**:
-
-   ```bash
-   droid-cli         # Interactive menu
-   # Select "Build & Run" for quick iterations
-   # Select "Open Logcat" when debugging
-   ```
-
-3. **Clean Builds**:
-   ```bash
-   droid-cli gradle clean
-   droid-cli build
-   ```
 
 ### CI/CD Integration
 
