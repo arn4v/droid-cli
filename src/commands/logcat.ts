@@ -96,8 +96,8 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       
       // Fallback to original logic
       if (projectInfo.packageName !== 'unknown') {
-        logcatCommand = 'adb';
-        logcatArgs = ['logcat', '-v', 'color', `--pid=$(adb shell pidof -s ${projectInfo.packageName})`];
+        logcatCommand = 'sh';
+        logcatArgs = ['-c', `adb logcat -v color --pid=$(adb shell pidof -s ${projectInfo.packageName})`];
         Logger.info(`Using PID-based filtering for package: ${projectInfo.packageName}`);
       } else {
         logcatCommand = 'adb';
