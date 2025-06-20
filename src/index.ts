@@ -10,6 +10,7 @@ import { logcatCommand } from './commands/logcat';
 import { gradleCommand } from './commands/gradle';
 import { initCommand } from './commands/init';
 import { variantCommand } from './commands/variant';
+import { setupWebViewCommand } from './commands/webview';
 import { ConfigManager } from './config/config-manager';
 
 const program = new Command();
@@ -99,6 +100,9 @@ program
   .command('variant')
   .description('Select default build variant')
   .action(wrapCommand(variantCommand));
+
+// Set up WebView command
+setupWebViewCommand(program);
 
 // If no command is provided, start interactive mode
 async function startInteractiveMode() {

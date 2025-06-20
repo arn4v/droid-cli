@@ -7,6 +7,7 @@ import { logcatCommand } from '../commands/logcat';
 import { gradleCommand, selectGradleTask, GradleResult } from '../commands/gradle';
 import { initCommand } from '../commands/init';
 import { variantCommand } from '../commands/variant';
+import { executeWebViewCommand } from '../commands/webview';
 import { ConfigManager } from '../config/config-manager';
 import { AndroidProject } from '../core/android-project';
 import { AdbManager } from '../core/adb';
@@ -107,6 +108,7 @@ export async function interactiveMenu(): Promise<void> {
           { name: '📱 Select Device', value: 'device' },
           { name: '🏗️  Change Build Variant', value: 'variant' },
           { name: '📋 Open Logcat', value: 'logcat' },
+          { name: '🌐 Debug WebView', value: 'webview' },
           { name: '⚙️  Run Gradle Task', value: 'gradle' },
           { name: '🧹 Clean Project', value: 'clean' },
           { name: '🔄 Sync Project', value: 'sync' },
@@ -151,6 +153,9 @@ export async function interactiveMenu(): Promise<void> {
           break;
         case 'logcat':
           await logcatCommand();
+          break;
+        case 'webview':
+          await executeWebViewCommand({});
           break;
         case 'gradle': {
           const task = await selectGradleTask();
