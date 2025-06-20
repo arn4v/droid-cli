@@ -4,6 +4,7 @@ import { AndroidProject } from '../core/android-project';
 import { ConfigManager } from '../config/config-manager';
 import { TerminalManager } from '../core/terminal';
 import { select } from '@inquirer/prompts';
+import { processTemplate, TemplateVariables } from '../utils/template';
 
 interface LogcatOptions {
   device?: string;
@@ -69,18 +70,40 @@ export async function logcatCommand(options: LogcatOptions = {}) {
 
     Logger.device(`Target device: ${targetDevice.name} (${targetDevice.id})`);
 
-    // Build logcat command
-    const logcatArgs = [
-      '-s', targetDevice.id,
-      'logcat'
-    ];
+    // Build logcat command using configurable template
+    const templateVariables: TemplateVariables = {
+      device_id: targetDevice.id,
+      package_name: projectInfo.packageName !== 'unknown' ? projectInfo.packageName : ''
+    };
 
-    // Filter by package name to show only app logs
-    if (projectInfo.packageName !== 'unknown') {
-      logcatArgs.push(`${projectInfo.packageName}:V`, '*:S');
-      Logger.info(`Filtering logs for package: ${projectInfo.packageName}`);
-    } else {
-      Logger.warn('Package name unknown, showing all logs');
+    let logcatCommand: string;
+    let logcatArgs: string[];
+
+    try {
+      const parsedCommand = processTemplate(config.logcat.template, templateVariables);
+      logcatCommand = parsedCommand.command;
+      logcatArgs = parsedCommand.args;
+      
+      Logger.info(`Using template: ${config.logcat.template}`);
+      if (projectInfo.packageName !== 'unknown') {
+        Logger.info(`Filtering logs for package: ${projectInfo.packageName}`);
+      } else {
+        Logger.warn('Package name unknown, template may not filter correctly');
+      }
+    } catch (error) {
+      Logger.error(`Template processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      Logger.info('Falling back to default logcat command');
+      
+      // Fallback to original logic
+      logcatCommand = 'adb';
+      logcatArgs = ['-s', targetDevice.id, 'logcat'];
+      
+      if (projectInfo.packageName !== 'unknown') {
+        logcatArgs.push(`${projectInfo.packageName}:V`, '*:S');
+        Logger.info(`Filtering logs for package: ${projectInfo.packageName}`);
+      } else {
+        Logger.warn('Package name unknown, showing all logs');
+      }
     }
 
     // Clear logcat if configured
@@ -117,7 +140,7 @@ export async function logcatCommand(options: LogcatOptions = {}) {
     
     Logger.step(`Opening logcat in ${terminalType}...`);
     
-    const success = await TerminalManager.spawnTerminal('adb', logcatArgs, {
+    const success = await TerminalManager.spawnTerminal(logcatCommand, logcatArgs, {
       title,
       terminal: terminalType as any,
     });
@@ -128,12 +151,12 @@ export async function logcatCommand(options: LogcatOptions = {}) {
     } else {
       Logger.error('Failed to open terminal');
       Logger.info('You can manually run the following command:');
-      Logger.info(`adb ${logcatArgs.join(' ')}`);
+      Logger.info(`${logcatCommand} ${logcatArgs.join(' ')}`);
       
       // Fallback: run logcat in current terminal
       Logger.step('Running logcat in current terminal (press Ctrl+C to stop)...');
       
-      const logcatProcess = require('../utils/process').ProcessManager.spawn('adb', logcatArgs);
+      const logcatProcess = require('../utils/process').ProcessManager.spawn(logcatCommand, logcatArgs);
       
       // Handle process termination
       process.on('SIGINT', () => {

@@ -160,6 +160,9 @@ export class ConfigManager {
       validConfig.logcat = {
         clearOnStart: Boolean(configData.logcat.clearOnStart),
         colorize: Boolean(configData.logcat.colorize),
+        template: typeof configData.logcat.template === 'string' 
+          ? configData.logcat.template 
+          : defaultConfig.logcat.template,
       };
     }
 
