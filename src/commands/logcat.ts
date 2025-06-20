@@ -84,6 +84,14 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       logcatCommand = parsedCommand.command;
       logcatArgs = parsedCommand.args;
       
+      // If the command contains shell substitution, wrap it in shell execution
+      const fullCommand = `${logcatCommand} ${logcatArgs.join(' ')}`;
+      if (fullCommand.includes('$(') && fullCommand.includes(')')) {
+        const userShell = process.env.SHELL ? require('path').basename(process.env.SHELL) : 'bash';
+        logcatCommand = userShell;
+        logcatArgs = ['-c', fullCommand];
+      }
+      
       Logger.info(`Using template: ${config.logcat.template}`);
       if (projectInfo.packageName !== 'unknown') {
         Logger.info(`Filtering logs for package: ${projectInfo.packageName}`);
@@ -96,8 +104,9 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       
       // Fallback to original logic
       if (projectInfo.packageName !== 'unknown') {
-        logcatCommand = 'adb';
-        logcatArgs = ['logcat', '-v', 'color', `--pid=$(adb shell pidof -s ${projectInfo.packageName})`];
+        const userShell = process.env.SHELL ? require('path').basename(process.env.SHELL) : 'bash';
+        logcatCommand = userShell;
+        logcatArgs = ['-c', `adb -s ${targetDevice.id} logcat -v color --pid=$(adb -s ${targetDevice.id} shell pidof -s ${projectInfo.packageName})`];
         Logger.info(`Using PID-based filtering for package: ${projectInfo.packageName}`);
       } else {
         logcatCommand = 'adb';
