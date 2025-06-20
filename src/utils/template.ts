@@ -25,19 +25,61 @@ export function substituteTemplate(template: string, variables: TemplateVariable
 }
 
 /**
- * Parses a template string into command and arguments
+ * Parses a template string into command and arguments, respecting shell syntax
  * @param template Template string with variables substituted
  * @returns Object with command and args array
  */
 export function parseTemplateCommand(template: string): { command: string; args: string[] } {
-  const parts = template.trim().split(/\s+/);
-  if (parts.length === 0) {
+  const trimmed = template.trim();
+  if (trimmed.length === 0) {
+    throw new Error('Template command cannot be empty');
+  }
+  
+  const args: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = '';
+  let parenDepth = 0;
+  
+  for (let i = 0; i < trimmed.length; i++) {
+    const char = trimmed[i];
+    
+    if (!inQuotes && (char === '"' || char === "'")) {
+      inQuotes = true;
+      quoteChar = char;
+      current += char;
+    } else if (inQuotes && char === quoteChar) {
+      inQuotes = false;
+      quoteChar = '';
+      current += char;
+    } else if (!inQuotes && char === '(') {
+      parenDepth++;
+      current += char;
+    } else if (!inQuotes && char === ')') {
+      parenDepth--;
+      current += char;
+    } else if (!inQuotes && parenDepth === 0 && /\s/.test(char)) {
+      if (current.length > 0) {
+        args.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  
+  // Add the last argument if any
+  if (current.length > 0) {
+    args.push(current);
+  }
+  
+  if (args.length === 0) {
     throw new Error('Template command cannot be empty');
   }
   
   return {
-    command: parts[0],
-    args: parts.slice(1)
+    command: args[0],
+    args: args.slice(1)
   };
 }
 
