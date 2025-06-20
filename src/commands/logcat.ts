@@ -96,8 +96,8 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       
       // Fallback to original logic
       if (projectInfo.packageName !== 'unknown') {
-        logcatCommand = 'bash';
-        logcatArgs = ['-c', `adb logcat -v color --pid=$(adb shell pidof -s ${projectInfo.packageName})`];
+        logcatCommand = 'adb';
+        logcatArgs = ['logcat', '-v', 'color', `--pid=$(adb shell pidof -s ${projectInfo.packageName})`];
         Logger.info(`Using PID-based filtering for package: ${projectInfo.packageName}`);
       } else {
         logcatCommand = 'adb';
@@ -156,7 +156,20 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       // Fallback: run logcat in current terminal
       Logger.step('Running logcat in current terminal (press Ctrl+C to stop)...');
       
-      const logcatProcess = require('../utils/process').ProcessManager.spawn(logcatCommand, logcatArgs);
+      // For fallback execution in current process, we need shell execution for command substitution
+      let fallbackCommand = logcatCommand;
+      let fallbackArgs = logcatArgs;
+      
+      // Check if the command contains shell substitution that needs shell execution
+      const fullCommand = `${logcatCommand} ${logcatArgs.join(' ')}`;
+      if (fullCommand.includes('$(') && fullCommand.includes(')')) {
+        // Use the user's default shell from environment, fallback to common shells
+        const userShell = process.env.SHELL ? require('path').basename(process.env.SHELL) : 'bash';
+        fallbackCommand = userShell;
+        fallbackArgs = ['-c', fullCommand];
+      }
+      
+      const logcatProcess = require('../utils/process').ProcessManager.spawn(fallbackCommand, fallbackArgs);
       
       // Handle process termination
       process.on('SIGINT', () => {

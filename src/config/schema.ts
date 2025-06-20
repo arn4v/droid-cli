@@ -37,8 +37,8 @@ export const androidCliConfigSchema = Joi.object<AndroidCliConfig>({
   logcat: Joi.object({
     clearOnStart: Joi.boolean().default(true).description('Clear logcat on start'),
     colorize: Joi.boolean().default(true).description('Colorize logcat output'),
-    template: Joi.string().default('bash -c "adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})"').description('Logcat command template with variable substitution'),
-  }).default({ clearOnStart: true, colorize: true, template: 'bash -c "adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})"' }),
+    template: Joi.string().default('adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})').description('Logcat command template with variable substitution'),
+  }).default({ clearOnStart: true, colorize: true, template: 'adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})' }),
   adbReverse: Joi.object({
     enabled: Joi.boolean().default(false).description('Enable automatic adb reverse port forwarding'),
     ports: Joi.array().items(Joi.number().port()).default([8081]).description('Ports to forward (e.g., [8081] for React Native Metro)'),
@@ -60,7 +60,7 @@ export const defaultConfig: AndroidCliConfig = {
   logcat: {
     clearOnStart: true,
     colorize: true,
-    template: 'bash -c "adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})"',
+    template: 'adb logcat -v color --pid=$(adb shell pidof -s {{package_name}})',
   },
   adbReverse: {
     enabled: false,
