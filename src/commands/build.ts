@@ -144,6 +144,17 @@ async function launchAppAndComplete(
           case 'build':
             // Return to trigger another build cycle
             return { success: true, shouldContinue: true };
+          case 'restart':
+            // Restart the app using ADB
+            Logger.step('Restarting app...');
+            const restartSuccess = await adbManager.launchApp(deviceId, packageName);
+            if (restartSuccess) {
+              Logger.success('App restarted successfully!');
+            } else {
+              Logger.warn('Failed to restart app. You can manually launch it from the device.');
+            }
+            // Continue the loop to show menu again
+            break;
           case 'logcat':
             const { logcatCommand } = await import('./logcat');
             await logcatCommand();

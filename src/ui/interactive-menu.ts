@@ -47,13 +47,14 @@ export async function handleBuildFailure(error: string): Promise<'retry' | 'menu
   return handleTaskFailure('Build', error);
 }
 
-export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu'> {
+export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu' | 'restart'> {
   while (true) {
     console.log(''); // Add spacing
     console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
     console.log(chalk.cyan('📱 Your app is now running on the device'));
     console.log(''); // Add spacing
     console.log(chalk.gray('───────────────────────────────────────'));
+    console.log(chalk.cyan('🔄 Restart app without rebuilding'));
     console.log(chalk.cyan('📋 View app logs in real-time'));
     console.log(chalk.cyan('🔨 Build again to test changes'));
     console.log(chalk.cyan('📱 Switch to different device'));
@@ -65,6 +66,7 @@ export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device
       message: 'What would you like to do next?',
       choices: [
         { name: '🔨 Build Again', value: 'build' as const },
+        { name: '🔄 Restart App', value: 'restart' as const },
         { name: '📋 Open Logcat', value: 'logcat' as const },
         { name: '📱 Select Different Device', value: 'device' as const },
         { name: '🏠 Return to Main Menu', value: 'menu' as const },
@@ -72,6 +74,8 @@ export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device
     });
     
     switch (choice) {
+      case 'restart':
+        return choice; // Will trigger app restart
       case 'logcat':
         await logcatCommand();
         // Clear console and add a brief pause to let logcat terminal open
@@ -209,7 +213,6 @@ export async function interactiveMenu(): Promise<void> {
         case 'exit':
           Logger.info('Goodbye! 👋');
           process.exit(0);
-          break;
         default:
           Logger.error('Invalid choice');
       }
