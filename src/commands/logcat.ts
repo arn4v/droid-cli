@@ -165,20 +165,8 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       // Fallback: run logcat in current terminal
       Logger.step('Running logcat in current terminal (press Ctrl+C to stop)...');
       
-      // For fallback execution in current process, we need shell execution for command substitution
-      let fallbackCommand = logcatCommand;
-      let fallbackArgs = logcatArgs;
-      
-      // Check if the command contains shell substitution that needs shell execution
-      const fullCommand = `${logcatCommand} ${logcatArgs.join(' ')}`;
-      if (fullCommand.includes('$(') && fullCommand.includes(')')) {
-        // Use the user's default shell from environment, fallback to common shells
-        const userShell = process.env.SHELL ? require('path').basename(process.env.SHELL) : 'bash';
-        fallbackCommand = userShell;
-        fallbackArgs = ['-c', fullCommand];
-      }
-      
-      const logcatProcess = require('../utils/process').ProcessManager.spawn(fallbackCommand, fallbackArgs);
+      // Use the already processed command and args (shell wrapping is already done in main logic)
+      const logcatProcess = require('../utils/process').ProcessManager.spawn(logcatCommand, logcatArgs);
       
       // Handle process termination
       process.on('SIGINT', () => {
