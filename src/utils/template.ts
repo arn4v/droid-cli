@@ -3,9 +3,9 @@
  */
 
 export interface TemplateVariables {
-  device_id: string;
-  package_name: string;
-  [key: string]: string | number | boolean;
+  device_id?: string;
+  package_name?: string;
+  [key: string]: string | number | boolean | undefined;
 }
 
 /**
