@@ -95,14 +95,14 @@ export async function logcatCommand(options: LogcatOptions = {}) {
       Logger.info('Falling back to default logcat command');
       
       // Fallback to original logic
-      logcatCommand = 'adb';
-      logcatArgs = ['-s', targetDevice.id, 'logcat'];
-      
       if (projectInfo.packageName !== 'unknown') {
-        logcatArgs.push(`${projectInfo.packageName}:V`, '*:S');
-        Logger.info(`Filtering logs for package: ${projectInfo.packageName}`);
+        logcatCommand = 'adb';
+        logcatArgs = ['logcat', `--pid=$(adb shell pidof -s ${projectInfo.packageName})`];
+        Logger.info(`Using PID-based filtering for package: ${projectInfo.packageName}`);
       } else {
-        Logger.warn('Package name unknown, showing all logs');
+        logcatCommand = 'adb';
+        logcatArgs = ['-s', targetDevice.id, 'logcat'];
+        Logger.warn('Package name unknown, using device-specific logcat');
       }
     }
 
