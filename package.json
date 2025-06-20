@@ -1,6 +1,6 @@
 {
   "name": "droid-cli",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Interactive CLI for Android development, inspired by Expo CLI",
   "main": "dist/index.js",
   "bin": {
@@ -33,6 +33,7 @@
     "README.md"
   ],
   "devDependencies": {
+    "@types/bun": "^1.2.16",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.8",
     "@types/node": "^24.0.3",
