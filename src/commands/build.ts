@@ -155,6 +155,22 @@ async function launchAppAndComplete(
             }
             // Continue the loop to show menu again
             break;
+          case 'clear-restart':
+            // Clear app data and restart the app
+            Logger.step('Clearing app data and restarting app...');
+            const clearSuccess = await adbManager.clearAppData(deviceId, packageName);
+            if (clearSuccess) {
+              const launchSuccess = await adbManager.launchApp(deviceId, packageName);
+              if (launchSuccess) {
+                Logger.success('App data cleared and app restarted successfully!');
+              } else {
+                Logger.warn('App data cleared but failed to restart app. You can manually launch it from the device.');
+              }
+            } else {
+              Logger.warn('Failed to clear app data. You can manually clear it from device settings.');
+            }
+            // Continue the loop to show menu again
+            break;
           case 'logcat':
             const { logcatCommand } = await import('./logcat');
             await logcatCommand();

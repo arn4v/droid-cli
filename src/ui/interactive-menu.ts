@@ -47,7 +47,7 @@ export async function handleBuildFailure(error: string): Promise<'retry' | 'menu
   return handleTaskFailure('Build', error);
 }
 
-export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu' | 'restart'> {
+export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device' | 'menu' | 'restart' | 'clear-restart'> {
   while (true) {
     console.log(''); // Add spacing
     console.log(chalk.green('🎉 Build, install, and launch completed successfully!'));
@@ -67,6 +67,7 @@ export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device
       choices: [
         { name: '🔨 Build Again', value: 'build' as const },
         { name: '🔄 Restart App', value: 'restart' as const },
+        { name: '🗑️  Clear Data & Restart', value: 'clear-restart' as const },
         { name: '📋 Open Logcat', value: 'logcat' as const },
         { name: '📱 Select Different Device', value: 'device' as const },
         { name: '🏠 Return to Main Menu', value: 'menu' as const },
@@ -76,6 +77,8 @@ export async function handleBuildSuccess(): Promise<'logcat' | 'build' | 'device
     switch (choice) {
       case 'restart':
         return choice; // Will trigger app restart
+      case 'clear-restart':
+        return choice; // Will trigger clear data and restart
       case 'logcat':
         await logcatCommand();
         // Clear console and add a brief pause to let logcat terminal open
