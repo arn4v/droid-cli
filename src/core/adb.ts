@@ -312,6 +312,32 @@ export class AdbManager {
     return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   }
 
+  async killApp(deviceId: string, packageName: string): Promise<boolean> {
+    if (!(await this.checkAdbAvailable())) {
+      return false;
+    }
+
+    try {
+      Logger.info(`Killing ${packageName} on ${deviceId}...`);
+      
+      const result = await ProcessManager.run('adb', [
+        '-s', deviceId,
+        'shell', 'am', 'force-stop', packageName
+      ]);
+
+      if (result.success) {
+        Logger.success(`App killed successfully on ${deviceId}`);
+        return true;
+      } else {
+        Logger.error(`Failed to kill app on ${deviceId}:`, result.stderr);
+        return false;
+      }
+    } catch (error) {
+      Logger.error('Error killing app:', error);
+      return false;
+    }
+  }
+
   async launchApp(deviceId: string, packageName: string, activityName?: string): Promise<boolean> {
     if (!(await this.checkAdbAvailable())) {
       return false;
@@ -342,6 +368,30 @@ export class AdbManager {
       }
     } catch (error) {
       Logger.error('Error launching app:', error);
+      return false;
+    }
+  }
+
+  async restartApp(deviceId: string, packageName: string, activityName?: string): Promise<boolean> {
+    Logger.info(`Restarting ${packageName} on ${deviceId}...`);
+    
+    // First kill the app
+    const killSuccess = await this.killApp(deviceId, packageName);
+    if (!killSuccess) {
+      Logger.warn('Failed to kill app, but continuing with launch...');
+    }
+
+    // Small delay to ensure the app is fully stopped
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Then launch it again
+    const launchSuccess = await this.launchApp(deviceId, packageName, activityName);
+    
+    if (launchSuccess) {
+      Logger.success(`App restarted successfully on ${deviceId}`);
+      return true;
+    } else {
+      Logger.error('Failed to restart app - kill succeeded but launch failed');
       return false;
     }
   }

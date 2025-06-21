@@ -145,9 +145,9 @@ async function launchAppAndComplete(
             // Return to trigger another build cycle
             return { success: true, shouldContinue: true };
           case 'restart':
-            // Restart the app using ADB
+            // Restart the app using ADB (kill + launch)
             Logger.step('Restarting app...');
-            const restartSuccess = await adbManager.launchApp(deviceId, packageName);
+            const restartSuccess = await adbManager.restartApp(deviceId, packageName);
             if (restartSuccess) {
               Logger.success('App restarted successfully!');
             } else {
@@ -160,8 +160,8 @@ async function launchAppAndComplete(
             Logger.step('Clearing app data and restarting app...');
             const clearSuccess = await adbManager.clearAppData(deviceId, packageName);
             if (clearSuccess) {
-              const launchSuccess = await adbManager.launchApp(deviceId, packageName);
-              if (launchSuccess) {
+              const restartSuccess = await adbManager.restartApp(deviceId, packageName);
+              if (restartSuccess) {
                 Logger.success('App data cleared and app restarted successfully!');
               } else {
                 Logger.warn('App data cleared but failed to restart app. You can manually launch it from the device.');
