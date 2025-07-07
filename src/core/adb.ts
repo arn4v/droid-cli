@@ -318,7 +318,7 @@ export class AdbManager {
     }
 
     try {
-      Logger.info(`Killing ${packageName} on ${deviceId}...`);
+      Logger.debug(`Killing ${packageName} on ${deviceId}...`);
       
       const result = await ProcessManager.run('adb', [
         '-s', deviceId,
@@ -326,14 +326,15 @@ export class AdbManager {
       ]);
 
       if (result.success) {
-        Logger.success(`App killed successfully on ${deviceId}`);
+        Logger.debug(`App killed successfully on ${deviceId}`);
         return true;
       } else {
-        Logger.error(`Failed to kill app on ${deviceId}:`, result.stderr);
+        // Don't log as error - app might not be running
+        Logger.debug(`Kill app result: ${result.stderr}`);
         return false;
       }
     } catch (error) {
-      Logger.error('Error killing app:', error);
+      Logger.debug('Error killing app:', error);
       return false;
     }
   }
@@ -364,6 +365,7 @@ export class AdbManager {
         return true;
       } else {
         Logger.error(`Failed to launch app on ${deviceId}:`, result.stderr);
+        Logger.debug(`Tried to launch: ${packageName}/${activity}`);
         return false;
       }
     } catch (error) {
@@ -375,10 +377,12 @@ export class AdbManager {
   async restartApp(deviceId: string, packageName: string, activityName?: string): Promise<boolean> {
     Logger.info(`Restarting ${packageName} on ${deviceId}...`);
     
-    // First kill the app
+    // First kill the app (ignore failure - app might not be running)
     const killSuccess = await this.killApp(deviceId, packageName);
     if (!killSuccess) {
-      Logger.warn('Failed to kill app, but continuing with launch...');
+      Logger.debug('App might not be running, proceeding with launch...');
+    } else {
+      Logger.debug('App killed successfully');
     }
 
     // Small delay to ensure the app is fully stopped
@@ -391,7 +395,7 @@ export class AdbManager {
       Logger.success(`App restarted successfully on ${deviceId}`);
       return true;
     } else {
-      Logger.error('Failed to restart app - kill succeeded but launch failed');
+      Logger.error('Failed to restart app - launch failed');
       return false;
     }
   }
@@ -421,12 +425,13 @@ export class AdbManager {
     // Fallback to common activity names
     const commonActivities = ['.MainActivity', '.Main', '.HomeActivity'];
     for (const activity of commonActivities) {
-      if (await this.activityExists(deviceId, packageName, activity)) {
-        return activity;
-      }
+      // Simply try to launch with the common activity name
+      // The launch will fail gracefully if the activity doesn't exist
+      Logger.debug(`Trying fallback activity: ${activity}`);
+      return activity;
     }
 
-    return null;
+    return '.MainActivity'; // Default fallback
   }
 
   private async activityExists(deviceId: string, packageName: string, activityName: string): Promise<boolean> {
@@ -466,6 +471,34 @@ export class AdbManager {
       Logger.error('Error clearing app data:', error);
       return false;
     }
+  }
+
+  async clearAppDataAndRestart(deviceId: string, packageName: string, activityName?: string): Promise<boolean> {
+    Logger.info(`Clearing app data and restarting ${packageName} on ${deviceId}...`);
+    
+    // First kill the app to ensure clean state
+    await this.killApp(deviceId, packageName);
+    
+    // Clear app data
+    const clearSuccess = await this.clearAppData(deviceId, packageName);
+    if (!clearSuccess) {
+      Logger.error('Failed to clear app data');
+      return false;
+    }
+
+    // Add a longer delay after clearing data
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Launch the app
+    const launchSuccess = await this.launchApp(deviceId, packageName, activityName);
+    
+    if (launchSuccess) {
+      Logger.success(`App data cleared and app restarted successfully on ${deviceId}`);
+      return true;
+    }
+    
+    Logger.error('App data cleared but failed to restart app');
+    return false;
   }
 
   getDeviceById(deviceId: string): AndroidDevice | null {
@@ -519,7 +552,7 @@ export class AdbManager {
       Logger.info(`Starting emulator: ${emulatorName}...`);
       
       // Start emulator in background
-      const emulatorProcess = ProcessManager.spawn('emulator', ['-avd', emulatorName, '-no-audio'], {
+      ProcessManager.spawn('emulator', ['-avd', emulatorName, '-no-audio'], {
         stdio: 'ignore',
       });
 
@@ -536,7 +569,7 @@ export class AdbManager {
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const devices = await this.getDevices();
+        await this.getDevices();
         const runningEmulators = this.getRunningEmulators();
         
         if (runningEmulators.length > 0) {
